@@ -1,11 +1,12 @@
 # compare_match.py
+import datetime
 import json
 import requests
 import pandas as pd
 from urllib.parse import urlencode
 import pyodbc
 
-def compare_match(match_id):
+def compare_match(match_id, csv_filename):
 
     # AccessToken class and related functions
     class AccessToken:
@@ -100,12 +101,18 @@ def compare_match(match_id):
         else:
             return str(value1) == str(value2)
 
-    def get_db_data(config, query):
+    # def get_db_data(config, query):
+    #     conn_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config["db"]["server"]};Database={config["db"]["database"]};UID={config["db"]["username"]};PWD={config["db"]["password"]}'
+    #     # conn_str = f"DRIVER={config['driver']};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']}"
+    #
+    #     with pyodbc.connect(conn_str) as conn:
+    #         df = pd.read_sql_query(query, conn)  # Change this line
+    #     return df
+# new try
+    def get_db_data(config, match_id, query):
         conn_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config["db"]["server"]};Database={config["db"]["database"]};UID={config["db"]["username"]};PWD={config["db"]["password"]}'
-        # conn_str = f"DRIVER={config['driver']};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']}"
-
         with pyodbc.connect(conn_str) as conn:
-            df = pd.read_sql_query(query, conn)  # Change this line
+            df = pd.read_sql_query(query, conn, params=[match_id])
         return df
 
     # Load DB configuration
@@ -127,14 +134,16 @@ def compare_match(match_id):
     JOIN MATCH_TEAMS MTA ON M.MATCH_ID = MTA.MATCH_ID AND MTA.SIDE = 'away'
     JOIN TEAMS TH ON M.HOME_TEAM_ID = TH.TEAM_ID
     JOIN TEAMS TA ON M.AWAY_TEAM_ID = TA.TEAM_ID
-    WHERE M.MATCH_ID = 5034295;
+    WHERE M.MATCH_ID = ?;
     """
 
 
     # Get data from DB
-    db_df = get_db_data(db_config, query)
+    print("print query "+query)
+    db_df = get_db_data(db_config, match_id, query) # match_id via parameter in the main
     print("db_df"+str(db_df))
     db_df.to_csv("comparison_results_5.csv", index=False)
+
 
     # create a db frame
     db_data = {
@@ -166,7 +175,12 @@ def compare_match(match_id):
     db_df['STARTING'] = db_df['STARTING'].astype(bool)
 
     # Get data from DB
-    db_df = get_db_data(db_config, query)
+    db_df = get_db_data(db_config, match_id, query)
+    # Normalize date format of START_DATE and END_DATE columns
+    # Normalize date format of START_DATE and END_DATE columns
+    db_df['START_DATE'] = pd.to_datetime(db_df['START_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
+    db_df['END_DATE'] = pd.to_datetime(db_df['END_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
+    db_df['KICKOFF_DATE'] = pd.to_datetime(db_df['KICKOFF_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
 
     # Update db_data dictionary with the values from the database
     db_data = {
@@ -206,7 +220,9 @@ def compare_match(match_id):
                 value = value[key]
         return value
 
-    # Match mappings
+
+
+# Match mappings
     mappings = [
         ("START_DATE", "season.startDate"),
         ("END_DATE", "season.endDate"),
@@ -232,11 +248,37 @@ def compare_match(match_id):
         # Get the column name from the DB DataFrame and the API data
         db_column_name, api_name = mapping
 
-        # Get the value from the DB DataFrame
+        # # Get the value from the DB DataFrame
+        # db_value = db_df.loc[0, db_column_name]
+        # # Convert gender code to string
+        # if db_column_name == "GENDER":
+        #     db_value = "Male" if db_value == 1 else "Female"
+        # if isinstance(db_value, str):
+        #     try:
+        #         db_value = datetime.datetime.strptime(db_value, '%d/%m/%Y %H:%M:%S').isoformat()
+        #     except ValueError:
+        #         pass
+
+            # Get the value from the DB DataFrame
         db_value = db_df.loc[0, db_column_name]
-        print("db "+str(db_value))
+        # Convert gender code to string
+        if db_column_name == "GENDER":
+            db_value = "Male" if db_value == 1 else "Female"
+        if isinstance(db_value, str):
+            try:
+                db_value = pd.to_datetime(db_value).strftime('%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                pass
+        db_df[db_column_name] = db_value
+
+        def normalize_date_format(date_string):
+            date_string = '2020-01-01T00:00:00'
+            date_string = date_string.replace('T', ' ')
+            datetime_obj = datetime.datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+            return datetime_obj.isoformat()
 
         # Get the value from the API data
+        # api_value = normalize_date_format(get_nested_value(api_data, api_name))
         api_value = get_nested_value(api_data, api_name)
         print("api "+str(api_value))
 
@@ -305,4 +347,4 @@ def compare_match(match_id):
 
     # Print the comparison DataFrame
     print(comparison_df)
-    comparison_df.to_csv("comparison_results13.csv", index=False)
+    comparison_df.to_csv(csv_filename, index=False)
