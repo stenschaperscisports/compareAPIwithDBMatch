@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a5a54e95-b1b2-460c-a42b-15e550b77e3b" name="Changes" comment="first commit with working code">
+    <list default="true" id="a5a54e95-b1b2-460c-a42b-15e550b77e3b" name="Changes" comment="Fixes and correct types">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/compare_match.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/compare_match.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
@@ -58,6 +58,7 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/stenschaper/Projects/compareAPIwithDBMatch/properties&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -66,6 +67,11 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/properties" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="compareAPIwithDBMatch" />
@@ -100,7 +106,7 @@
       <updated>1679308959955</updated>
       <workItem from="1679308961153" duration="8083000" />
       <workItem from="1679332719253" duration="119000" />
-      <workItem from="1679333135294" duration="18346000" />
+      <workItem from="1679333135294" duration="28373000" />
     </task>
     <task id="LOCAL-00001" summary="first commit with working code">
       <created>1679413933255</created>
@@ -109,7 +115,14 @@
       <option name="project" value="LOCAL" />
       <updated>1679413933255</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Fixes and correct types">
+      <created>1679416012015</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1679416012015</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -117,6 +130,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="first commit with working code" />
-    <option name="LAST_COMMIT_MESSAGE" value="first commit with working code" />
+    <MESSAGE value="Fixes and correct types" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixes and correct types" />
   </component>
 </project>

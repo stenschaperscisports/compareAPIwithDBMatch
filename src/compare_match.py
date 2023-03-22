@@ -6,7 +6,23 @@ import pandas as pd
 from urllib.parse import urlencode
 import pyodbc
 
-def compare_match(match_id, csv_filename):
+def compare_match(environment, match_id, csv_filename):
+    # Load the configuration file based on the environment
+
+    if environment == 'prod':
+        api_config_file = "../properties/configapi_prod.json"
+        db_config_file = "../properties/configdb_prod.json"
+    else:
+        api_config_file = "../properties/configapi.json"
+        db_config_file = "../properties/configdb.json"
+
+    with open(api_config_file) as f:
+        api_config = json.load(f)
+
+    with open(db_config_file) as f:
+        db_config = json.load(f)
+
+
 
     # AccessToken class and related functions
     class AccessToken:
@@ -24,6 +40,7 @@ def compare_match(match_id, csv_filename):
 
             # send the request
             url = token_url
+            print("URL:", url)
             data = {
                 "grant_type": grant_type,
                 "username": username,
@@ -33,14 +50,16 @@ def compare_match(match_id, csv_filename):
                 "scope": scope
             }
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            print("Data:", data)
             response = requests.post(url, data=data, headers=headers)
+            print(response)
             response.raise_for_status()
             json_data = json.loads(response.text)
             AccessToken.access_token = json_data["access_token"]
 
             # Save the access token to a variable and print it
             self.saved_access_token = AccessToken.access_token
-            print("Access token:", self.saved_access_token)
+            # print("Access token:", self.saved_access_token)
             response.close()
 
         def get_access_token(self):
@@ -49,8 +68,11 @@ def compare_match(match_id, csv_filename):
 
 
     def get_token(config):
-        access_token = AccessToken("../properties/api_credentials.json", "https://identity-test.scisports.app/connect/token")
-        # access_token = AccessToken("../properties/configapi.json")
+        if environment == 'prod':
+            access_token = AccessToken("../properties/api_credentials_prod.json", "https://identity.scisports.app/connect/token")
+        else:
+            access_token = AccessToken("../properties/api_credentials.json", "https://identity-test.scisports.app/connect/token")
+        print(str(access_token))
         token = access_token.get_access_token()
         if token is None:
             print("Error getting access token")
@@ -59,6 +81,7 @@ def compare_match(match_id, csv_filename):
 
 
     def get_api_match_and_players(config, match_id):
+        print(config)
         token = get_token(config)
         if token is None:
             return
@@ -76,16 +99,15 @@ def compare_match(match_id, csv_filename):
 
         json_data = response.json()
         response.close()
-        print("API data:", json_data)
+        # print("API data:", json_data)
         return json_data
 
 
     # Load the configuration file
-    with open("../properties/configapi.json") as f:
+    with open(api_config_file) as f:
         config = json.load(f)
+        print(str(config))
 
-    # # Use the match_id you want to fetch data for
-    # match_id = 5034295
 
     # Step 1: Fetch data from the API
     api_data = get_api_match_and_players(config, match_id)
@@ -101,14 +123,6 @@ def compare_match(match_id, csv_filename):
         else:
             return str(value1) == str(value2)
 
-    # def get_db_data(config, query):
-    #     conn_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config["db"]["server"]};Database={config["db"]["database"]};UID={config["db"]["username"]};PWD={config["db"]["password"]}'
-    #     # conn_str = f"DRIVER={config['driver']};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']}"
-    #
-    #     with pyodbc.connect(conn_str) as conn:
-    #         df = pd.read_sql_query(query, conn)  # Change this line
-    #     return df
-# new try
     def get_db_data(config, match_id, query):
         conn_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config["db"]["server"]};Database={config["db"]["database"]};UID={config["db"]["username"]};PWD={config["db"]["password"]}'
         with pyodbc.connect(conn_str) as conn:
@@ -116,7 +130,7 @@ def compare_match(match_id, csv_filename):
         return df
 
     # Load DB configuration
-    db_config = get_db_config("../properties/configdb.json")
+    db_config = get_db_config(db_config_file)
 
     # Define your query
     query = """SELECT M.*, S.START_DATE, S.END_DATE, S.NAME as SEASON_NAME, L.GENDER, L.AREA_ID, L.NAME as LEAGUE_NAME, MTP.PLAYER_ID AS PLAYER_ID, MTP.GOALS, MTP.OWN_GOALS, MTP.RED_CARDS, MTP.SHIRT_NUMBER, MTP.YELLOW_CARDS, MTP.MINUTES_PLAYED, MTP.STARTING, MTP.POSITION_1,
@@ -139,10 +153,10 @@ def compare_match(match_id, csv_filename):
 
 
     # Get data from DB
-    print("print query "+query)
+    # print("print query "+query)
     db_df = get_db_data(db_config, match_id, query) # match_id via parameter in the main
-    print("db_df"+str(db_df))
-    db_df.to_csv("comparison_results_5.csv", index=False)
+    # print("db_df"+str(db_df))
+    # db_df.to_csv("comparison_results_5.csv", index=False)
 
 
     # create a db frame
@@ -170,14 +184,14 @@ def compare_match(match_id, csv_filename):
         "KICKOFF_DATE": "2021-06-20 16:00:00.00"
     }
 
-    # ?
     db_df = pd.DataFrame([db_data])
-    db_df['STARTING'] = db_df['STARTING'].astype(bool)
+    # db_df['STARTING'] = db_df['STARTING'].astype(bool)
+    db_df['STARTING'] = db_df['STARTING'].replace({True: 1, False: 0}).astype(bool)
+
+
 
     # Get data from DB
     db_df = get_db_data(db_config, match_id, query)
-    # Normalize date format of START_DATE and END_DATE columns
-    # Normalize date format of START_DATE and END_DATE columns
     db_df['START_DATE'] = pd.to_datetime(db_df['START_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
     db_df['END_DATE'] = pd.to_datetime(db_df['END_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
     db_df['KICKOFF_DATE'] = pd.to_datetime(db_df['KICKOFF_DATE']).dt.strftime('%Y-%m-%dT%H:%M:%S')
@@ -207,7 +221,6 @@ def compare_match(match_id, csv_filename):
         "KICKOFF_DATE": db_df.loc[0, "KICKOFF_DATE"]
     }
 
-    print("db_data"+str(db_data))
     # Step 3: Compare the values
     def get_nested_value(data, key_path):
         keys = key_path.split(".")
@@ -238,8 +251,6 @@ def compare_match(match_id, csv_filename):
         ("KICKOFF_DATE", "kickOffDate"),
     ]
 
-    print("mappings"+str(mappings))
-
     # Create an empty DataFrame to store the comparison results
     comparison_df = pd.DataFrame(columns=['DB Column Name', 'API Name', 'DB Value', 'API Value', 'Match'])
 
@@ -248,16 +259,6 @@ def compare_match(match_id, csv_filename):
         # Get the column name from the DB DataFrame and the API data
         db_column_name, api_name = mapping
 
-        # # Get the value from the DB DataFrame
-        # db_value = db_df.loc[0, db_column_name]
-        # # Convert gender code to string
-        # if db_column_name == "GENDER":
-        #     db_value = "Male" if db_value == 1 else "Female"
-        # if isinstance(db_value, str):
-        #     try:
-        #         db_value = datetime.datetime.strptime(db_value, '%d/%m/%Y %H:%M:%S').isoformat()
-        #     except ValueError:
-        #         pass
 
             # Get the value from the DB DataFrame
         db_value = db_df.loc[0, db_column_name]
@@ -278,22 +279,20 @@ def compare_match(match_id, csv_filename):
             return datetime_obj.isoformat()
 
         # Get the value from the API data
-        # api_value = normalize_date_format(get_nested_value(api_data, api_name))
         api_value = get_nested_value(api_data, api_name)
-        print("api "+str(api_value))
+        # print("api "+str(api_value))
 
         # Compare the values
         match = compare_values(db_value, api_value)
-        print("match "+str(match))
 
-        # Add the comparison result to the comparison_df
+
         comparison_df = pd.concat([comparison_df, pd.DataFrame([{
             'DB Column Name': db_column_name,
             'API Name': api_name,
             'DB Value': db_value,
             'API Value': api_value,
-            'Match': match
-        }], index=[0])], ignore_index=True)
+            'Match': bool(match)
+        }]).astype({'Match': bool})], ignore_index=True)
 
     # Compare player data
     player_mappings = [
@@ -318,7 +317,7 @@ def compare_match(match_id, csv_filename):
                     break
 
             if not matching_api_player:
-                print(f"No matching API player found for DB shirt number {db_shirt_number}")
+                print(f"No matching API player found for DB shirt number {db_shirt_number} of match {match_id}.")
                 continue
 
             for mapping in player_mappings:
@@ -329,21 +328,27 @@ def compare_match(match_id, csv_filename):
 
                 # Get the value from the API player data
                 api_value = get_nested_value(matching_api_player, api_name)
-
                 match = compare_values(db_value, api_value)
 
-
-            # # Compare the values
-            #     match = str(db_value) == str(api_value)
-
-                # Add the comparison result to the comparison_df
+                # # Add the comparison result to the comparison_df
+                # comparison_df = pd.concat([comparison_df, pd.DataFrame([{
+                #     'DB Column Name': db_column_name,
+                #     'API Name': f"{team_type}.players[{i}].{api_name}",
+                #     'DB Value': db_value,
+                #     'API Value': api_value,
+                #     'Match': bool(match)
+                # }], index=[0])], ignore_index=True)
+                # # Add the comparison result to the comparison_df
                 comparison_df = pd.concat([comparison_df, pd.DataFrame([{
                     'DB Column Name': db_column_name,
                     'API Name': f"{team_type}.players[{i}].{api_name}",
                     'DB Value': db_value,
                     'API Value': api_value,
-                    'Match': match
+                    'Match': bool(match)
                 }], index=[0])], ignore_index=True)
+
+                # Cast 'Match' column to bool dtype
+                comparison_df['Match'] = comparison_df['Match'].astype(bool)
 
     # Print the comparison DataFrame
     print(comparison_df)
